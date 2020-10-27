@@ -1,0 +1,9 @@
+﻿  Knn.cpp
+C:\Users\Rafal\source\repos\knnminmaxstandarization\knnminmaxstandarization\Knn.cpp(30,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\Rafal\source\repos\knnminmaxstandarization\knnminmaxstandarization\Knn.cpp(31,22): warning C4018: '<': signed/unsigned mismatch
+C:\Users\Rafal\source\repos\knnminmaxstandarization\knnminmaxstandarization\Knn.cpp(36,18): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+C:\Users\Rafal\source\repos\knnminmaxstandarization\knnminmaxstandarization\Knn.cpp(45,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\Rafal\source\repos\knnminmaxstandarization\knnminmaxstandarization\Knn.cpp(70,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\Rafal\source\repos\knnminmaxstandarization\knnminmaxstandarization\Knn.cpp(86,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\Rafal\source\repos\knnminmaxstandarization\knnminmaxstandarization\Knn.cpp(93,21): warning C4018: '<': signed/unsigned mismatch
+  knnminmaxstandarization.vcxproj -> C:\Users\Rafal\source\repos\knnminmaxstandarization\Debug\knnminmaxstandarization.exe
