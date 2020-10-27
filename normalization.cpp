@@ -1,6 +1,7 @@
 #include "CsvFunctions.h"
 #include <omp.h>
 
+
 void normalize(string outFile, vector< pair<string, vector<double>> >& data);
 double findMin(vector<double> data);
 double findMax(vector<double> data);

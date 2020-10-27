@@ -1,7 +1,9 @@
 #include "CsvFunctions.h"
 #include <algorithm> 
-#include <omp.h>
+#include <mpi.h>
 
+// mpicxx –o program program.cpp
+// mpirun –n 4 ./program
 
 class Knn {
 private:
@@ -52,7 +54,7 @@ public:
 
 		sort(distancesAndLabels.begin(), distancesAndLabels.end());
 		vector<int> nearestResults = {0, 0};
-		#pragma omp parallel for num_threads(threadNum)
+		// #pragma omp parallel for num_threads(threadNum)
 		for (int i = 0; i < k_numbers; ++i) {
 			nearestResults[(int)distancesAndLabels[i].second]++;
 		}
@@ -68,7 +70,7 @@ public:
 		int good = 0;
 		int bad = 0;
 		double time = omp_get_wtime();
-		#pragma omp parallel for num_threads(threadNum)
+		// #pragma omp parallel for num_threads(threadNum)
 		for (int i = 0; i < trainData.size(); ++i) {
 			int predictedTarget = predict(trainData[i]);
 			if (predictedTarget == trainData[i][targetColumn]) {
@@ -86,7 +88,7 @@ public:
 	double euclideanDistance(vector<double> learning, vector<double> target) {
 		vector<double> distanceSquares = {};
 		double euclideanDistance = 0;
-		#pragma omp parallel for num_threads(threadNum)
+		// #pragma omp parallel for num_threads(threadNum)
 		for (int i = 0; i < learning.size(); ++i) {
 			if (i != targetColumn) {
 				double diff = learning[i] - target[i];
@@ -94,7 +96,7 @@ public:
 			}
 		}
 		
-		#pragma omp parallel for num_threads(threadNum)
+		// #pragma omp parallel for num_threads(threadNum)
 		for (int i = 0; i < distanceSquares.size(); ++i) {
 			euclideanDistance += distanceSquares[i];
 		}
