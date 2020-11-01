@@ -11,7 +11,7 @@ int threadNum = 0;
 int main(int argc, char* argv[])
 {	
     vector<pair<string, vector<double>> > out;
-    out = readFromCsv(fileName);
+    out = readFromCsv("bigheartdata.csv");
     
     MPI_Init(&argc, &argv);
     normalize("normalized_mpi.csv", out);
@@ -58,12 +58,12 @@ void normalize(string outFile, vector< pair<string, vector<double>> >& data) {
  
             // count standarization for main process (rank = 0)
             for (int i = 0; i < numOfChunksForThread[0]; ++i){
-                double avg = findAverage(data[i].second);
-                double deviation = findDeviation(data[i].second);
-         
-                for (int j = 0; j < data[i].second.size(); ++j) {
-                    data[i].second[j] = (data[i].second[j] - avg) / deviation;
-                }
+                min = findMin(data[i].second);
+		max = findMax(data[i].second);
+		//normalizowanie
+		for (int j = 0; j < data[i].second.size(); ++j) {
+		     data[i].second[j] = (data[i].second[j] - min) / (max - min);
+		}
             }
  
             // read data from other processors
@@ -86,7 +86,7 @@ void normalize(string outFile, vector< pair<string, vector<double>> >& data) {
        
  
         
-        for (int i = 0; i < data.size(); ++i) {
+        for (int i = 0; i < numOfChunksForThread[rank]; ++i) {
             min = findMin(data[i].second);
             max = findMax(data[i].second);
             //normalizowanie
@@ -110,7 +110,7 @@ void normalize(string outFile, vector< pair<string, vector<double>> >& data) {
 
 double findMin(vector<double> data) {
     double min = 10000000;
-    #pragma omp parallel for num_threads(threadNum)
+
     for (int i = 0; i < data.size(); ++i) {
 	
         if (data[i] < min) {
@@ -122,7 +122,7 @@ double findMin(vector<double> data) {
 
 double findMax(vector<double> data) {
     double max = -10000000;
-    #pragma omp parallel for num_threads(threadNum)
+
     for (int i = 0; i < data.size(); ++i) {
 	
         if (data[i] > max) {
