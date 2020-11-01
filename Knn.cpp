@@ -1,9 +1,6 @@
 #include "CsvFunctions.h"
 #include <algorithm> 
-#include <mpi.h>
-
-// mpicxx –o program program.cpp
-// mpirun –n 4 ./program
+#include "mpi.h"
 
 class Knn {
 private:
@@ -41,10 +38,10 @@ public:
 	}
 
 	int predict(vector<double> features) {
-		
+
 		vector<pair<double, int>> distancesAndLabels = {};
-		
-		
+
+
 		for (int i = 0; i < learningData.size(); ++i) {
 			double dist = euclideanDistance(learningData[i], features);
 			int ff = (int)learningData[i][targetColumn];
@@ -53,8 +50,8 @@ public:
 		}
 
 		sort(distancesAndLabels.begin(), distancesAndLabels.end());
-		vector<int> nearestResults = {0, 0};
-		// #pragma omp parallel for num_threads(threadNum)
+		vector<int> nearestResults = { 0, 0 };
+#pragma omp parallel for num_threads(threadNum)
 		for (int i = 0; i < k_numbers; ++i) {
 			nearestResults[(int)distancesAndLabels[i].second]++;
 		}
@@ -66,37 +63,103 @@ public:
 		}
 	}
 
-	double checkAccuracy() {
+	void checkAccuracy() {
 		int good = 0;
 		int bad = 0;
-		double time = omp_get_wtime();
-		// #pragma omp parallel for num_threads(threadNum)
-		for (int i = 0; i < trainData.size(); ++i) {
-			int predictedTarget = predict(trainData[i]);
-			if (predictedTarget == trainData[i][targetColumn]) {
-				++good;
-			}
-			else {
-				++bad;
+		int rank;
+		int size;
+		int tag = 99;
+		MPI_Status stats;
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		int numThread = MPI_Comm_size(MPI_COMM_WORLD, &size);
+		numThread = size;
+		int chunks = trainData.size() - 1;
+		int chunkSize = trainData[0].size();
+		std::vector<int> numOfChunksForThread(numThread, 0);
+		int chunkPerThread = chunks / numThread;
+		for (int i = 0; i < numOfChunksForThread.size(); ++i) {
+			numOfChunksForThread[i] = chunkPerThread;
+		}
+		if (chunks > (chunkPerThread * numThread)) {
+			for (int i = 0; i < chunks - (chunkPerThread * numThread); ++i) {
+				numOfChunksForThread[i] += 1;
 			}
 		}
-		double time2 = omp_get_wtime();
-		cout << time2-time;
-		return good / (double)(good + bad);
+
+		if (rank == 0) {
+			double startTime = MPI_Wtime();
+			// sending chunks to available processors
+			int chunkToSend = numOfChunksForThread[0]; //we don't send chunks which have to be processed by first thread
+			for (int j = 1; j < numOfChunksForThread.size(); ++j) {
+				for (int k = 0; k < numOfChunksForThread[j]; ++k) {
+					MPI_Send(&trainData[chunkToSend][0], chunkSize, MPI_DOUBLE, j, tag, MPI_COMM_WORLD);
+					chunkToSend++;
+				}
+			}
+
+			// count knn for main process (rank = 0)
+			for (int i = 0; i < numOfChunksForThread[0]; ++i) {
+				int predictedTarget = predict(trainData[i]);
+				if (predictedTarget == trainData[i][targetColumn]) {
+					++good;
+				}
+				else {
+					++bad;
+				}
+			}
+
+			// read data from other processors
+			int receivedChunkNumber = numOfChunksForThread[0]; //we don't receive chunks which was processed by first thread
+			std::vector<double> goodAndBadValues(2, 0);
+			for (int j = 1; j < numOfChunksForThread.size(); ++j) {
+				MPI_Recv(&goodAndBadValues[0], 2, MPI_DOUBLE, j, tag, MPI_COMM_WORLD, &stats);
+				good += goodAndBadValues[0];
+				bad += goodAndBadValues[1];
+			}
+
+
+			double endTime = MPI_Wtime();
+			std::cout << endTime - startTime << std::endl;
+		}
+		else {
+			//receive
+			std::vector<double> outputData(2);
+			for (int i = 0; i < numOfChunksForThread[rank]; ++i) {
+				MPI_Recv(&trainData[i][0], chunkSize, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &stats);
+			}
+
+			//calculate normalization for process chunks
+			for (int i = 0; i < numOfChunksForThread[0]; ++i) {
+				int predictedTarget = predict(trainData[i]);
+				if (predictedTarget == trainData[i][targetColumn]) {
+					outputData[0] += 1;
+				}
+				else {
+					outputData[1] += 1;
+				}
+			}
+
+			//send
+
+			MPI_Send(&outputData[0], 2, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD);
+
+		}
+
+
 	}
 
 	double euclideanDistance(vector<double> learning, vector<double> target) {
 		vector<double> distanceSquares = {};
 		double euclideanDistance = 0;
-		// #pragma omp parallel for num_threads(threadNum)
+
 		for (int i = 0; i < learning.size(); ++i) {
 			if (i != targetColumn) {
 				double diff = learning[i] - target[i];
 				distanceSquares.push_back(diff * diff);
 			}
 		}
-		
-		// #pragma omp parallel for num_threads(threadNum)
+
+
 		for (int i = 0; i < distanceSquares.size(); ++i) {
 			euclideanDistance += distanceSquares[i];
 		}
@@ -108,12 +171,13 @@ public:
 
 
 int main(int argc, char* argv[]) {
-	int threadNum = stoi(argv[1]);
-	string fileName = argv[2];
-	
-	Knn* knn = new Knn(5,0, threadNum);
-	knn->loadData(fileName, 14, 30);
-	double accuracy = knn->checkAccuracy();
-	cout << endl << accuracy;
-	delete knn;
+
+	MPI_Init(&argc, &argv);
+	for (int i = 0; i < 20; ++i) {
+		Knn* knn = new Knn(2, 0);
+		knn->loadData("./dataset/heart.csv", 14, 30);
+		knn->checkAccuracy();
+		delete knn;
+	}
+	MPI_Finalize();
 }
