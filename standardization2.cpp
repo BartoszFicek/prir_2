@@ -9,7 +9,7 @@ void standardize(string outFile, vector< pair<string, vector<double>> >& data);
 int main(int argc, char* argv[])
 {
     vector<pair<string, vector<double>> > out;
-    out = readFromCsv("bigheartdata.csv");
+    out = readFromCsv("./dataset/bigheartdata.csv");
     MPI_Init(&argc, &argv);
  
     standardize("standarized_mpi.csv", out);

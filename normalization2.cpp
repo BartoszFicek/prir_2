@@ -11,7 +11,7 @@ int threadNum = 0;
 int main(int argc, char* argv[])
 {	
     vector<pair<string, vector<double>> > out;
-    out = readFromCsv("bigheartdata.csv");
+    out = readFromCsv("./dataset/bigheartdata.csv");
     
     MPI_Init(&argc, &argv);
     normalize("normalized_mpi.csv", out);
